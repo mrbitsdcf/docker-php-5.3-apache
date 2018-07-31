@@ -38,35 +38,39 @@ RUN CFLAGS="-fPIC" && OPENSSL_VERSION="1.0.2d" \
       && ./config shared && make && make install \
       && rm -rf /tmp/*
 
-ENV PHP_VERSION 5.3.26
+ENV PHP_VERSION 5.3.27
 
 ENV PHP_INI_DIR /usr/local/lib
 RUN mkdir -p $PHP_INI_DIR/conf.d
 
 # php 5.3 needs older autoconf
 RUN set -x \
-	&& apt-get update && apt-get install -y autoconf2.13 && rm -r /var/lib/apt/lists/* \
+	&& apt-get update && apt-get install -y autoconf2.13 zlib1g-dev && rm -r /var/lib/apt/lists/* \
 	&& curl -SLO http://launchpadlibrarian.net/140087283/libbison-dev_2.7.1.dfsg-1_amd64.deb \
 	&& curl -SLO http://launchpadlibrarian.net/140087282/bison_2.7.1.dfsg-1_amd64.deb \
 	&& dpkg -i libbison-dev_2.7.1.dfsg-1_amd64.deb \
 	&& dpkg -i bison_2.7.1.dfsg-1_amd64.deb \
 	&& rm *.deb \
-	&& curl -SL "http://php.net/get/php-$PHP_VERSION.tar.bz2/from/this/mirror" -o php.tar.bz2 \
-	&& curl -SL "http://php.net/get/php-$PHP_VERSION.tar.bz2.asc/from/this/mirror" -o php.tar.bz2.asc \
-	&& gpg --verify php.tar.bz2.asc \
+	&& curl -SL "http://php.net/get/php-$PHP_VERSION.tar.bz2/from/this/mirror" -o php.tar.bz2 
+ 
+RUN set -x \
 	&& mkdir -p /usr/src/php \
 	&& tar -xf php.tar.bz2 -C /usr/src/php --strip-components=1 \
-	&& rm php.tar.bz2* \
+	&& rm php.tar.bz2*
+ 
+RUN set -x \
 	&& cd /usr/src/php \
 	&& ./buildconf --force \
+
+RUN set -x \ 
 	&& ./configure --disable-cgi \
 		$(command -v apxs2 > /dev/null 2>&1 && echo '--with-apxs2' || true) \
     		--with-config-file-path="$PHP_INI_DIR" \
     		--with-config-file-scan-dir="$PHP_INI_DIR/conf.d" \
+		--with-zlib \
 		--with-mysql \
 		--with-mysqli \
 		--with-pdo-mysql \
-		--with-zlib \
 		--with-openssl=/usr/local/ssl \
 	&& make -j"$(nproc)" \
 	&& make install \
