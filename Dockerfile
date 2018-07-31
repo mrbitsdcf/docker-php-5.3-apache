@@ -1,5 +1,8 @@
 FROM buildpack-deps:jessie
-MAINTAINER Eugene Ware <eugene@noblesamurai.com>
+LABEL "Maintainer"="MrBiTs"
+LABEL "e-mail"="mrbits.dcf@gmail.com"
+LABEL "version"="0.0.1"
+
 
 RUN apt-get update && apt-get install -y curl && rm -r /var/lib/apt/lists/*
 
@@ -35,7 +38,7 @@ RUN CFLAGS="-fPIC" && OPENSSL_VERSION="1.0.2d" \
       && ./config shared && make && make install \
       && rm -rf /tmp/*
 
-ENV PHP_VERSION 5.3.29
+ENV PHP_VERSION 5.3.26
 
 ENV PHP_INI_DIR /usr/local/lib
 RUN mkdir -p $PHP_INI_DIR/conf.d
@@ -58,11 +61,12 @@ RUN set -x \
 	&& ./buildconf --force \
 	&& ./configure --disable-cgi \
 		$(command -v apxs2 > /dev/null 2>&1 && echo '--with-apxs2' || true) \
-    --with-config-file-path="$PHP_INI_DIR" \
-    --with-config-file-scan-dir="$PHP_INI_DIR/conf.d" \
+    		--with-config-file-path="$PHP_INI_DIR" \
+    		--with-config-file-scan-dir="$PHP_INI_DIR/conf.d" \
 		--with-mysql \
 		--with-mysqli \
 		--with-pdo-mysql \
+		--with-zlib \
 		--with-openssl=/usr/local/ssl \
 	&& make -j"$(nproc)" \
 	&& make install \
@@ -70,10 +74,16 @@ RUN set -x \
 	&& apt-get purge -y --auto-remove autoconf2.13 \
   && make clean
 
+# Install composer
+RUN curl -sS https://getcomposer.org/installer | php -- \
+      --filename=composer \
+      --install-dir=/usr/local/bin && \
+  composer clear-cache
+
 COPY docker-php-* /usr/local/bin/
 COPY apache2-foreground /usr/local/bin/
 
-WORKDIR /var/www/html
+# WORKDIR /var/www/html
 
 EXPOSE 80
 CMD ["apache2-foreground"]
